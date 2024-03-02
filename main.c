@@ -2,9 +2,33 @@
 #include <stdlib.h>
 #include <pthread.h>
 int board[9][9];
+int solution = 1;
+
+int numberIsInCol(int check, int col) {
+    for(int i = 0; i < 9; ++i) {
+        if(board[i][col] == check) {
+            return 1;
+        }
+    }
+    return -1;
+}
+
+void* columnWorker(void* param) {
+    for(int i = 0; i < 9; ++i) {
+        for(int j = 1; j < 10; ++j) {
+            if(numberIsInCol(j, i) != 1) {
+                solution = 0; //no solution
+                printf("didn't find %d\n", j);
+                pthread_exit(0);
+            } 
+        }
+    }
+    pthread_exit(0);
+}
 
 int main(int argc, char** argv) {
     FILE* filePtr;
+    pthread_t tid;
     int num;
     char ch;
 
@@ -26,6 +50,11 @@ int main(int argc, char** argv) {
         }
         printf("\n");
     }
+
+    pthread_create(&tid, NULL, columnWorker, NULL);
+    pthread_join(tid, NULL);
+
+    printf("SOLUTION: %d\n", solution);
     
     fclose(filePtr);
     return 0;
