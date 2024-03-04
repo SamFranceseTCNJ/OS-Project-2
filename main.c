@@ -4,6 +4,7 @@
 int board[9][9];
 int solution = 1;
 
+// Function to check if a number is present in a column
 int numberIsInCol(int check, int col) {
     for(int i = 0; i < 9; ++i) {
         if(board[i][col] == check) {
@@ -13,12 +14,37 @@ int numberIsInCol(int check, int col) {
     return -1;
 }
 
+// Function to check if a number is present in a row
+int numberIsInRow(int check, int row) {
+    for(int j = 0; j < 9; ++j) {
+        if(board[row][j] == check) {
+            return 1;
+        }
+    }
+    return -1;
+}
+
+// Worker thread function to check column validity
 void* columnWorker(void* param) {
     for(int i = 0; i < 9; ++i) {
         for(int j = 1; j < 10; ++j) {
             if(numberIsInCol(j, i) != 1) {
                 solution = 0; //no solution
-                printf("didn't find %d\n", j);
+                printf("Column didn't find %d\n", j);
+                pthread_exit(0);
+            } 
+        }
+    }
+    pthread_exit(0);
+}
+
+// Worker thread function to check row validity
+void* rowWorker(void* param) {
+   for(int i = 0; i < 9; ++i) {
+        for(int j = 1; j < 10; ++j) {
+            if(numberIsInRow(j, i) != 1) {
+                solution = 0; //no solution
+                printf("Row didn't find %d\n", j);
                 pthread_exit(0);
             } 
         }
