@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 int board[9][9];
 int solution = 1;
 
@@ -52,9 +55,38 @@ void* rowWorker(void* param) {
     pthread_exit(0);
 }
 
+// Function to validate Sudoku solution using threads
+void validateSudokuWithThreads(int option) {
+    pthread_t tid[9];
+    int data[2];
+    
+    // Create threads based on the option selected
+    switch(option) {
+        case 1: // One thread for each column
+            for(int i = 0; i < 9; ++i) {
+                pthread_create(&tid[i], NULL, columnWorker, NULL);
+            }
+            break;
+        case 2: // One thread for each row
+           
+            break;
+        case 3: // One thread for each subgrid
+            
+            break;
+        default:
+            printf("Invalid option\n");
+            return;
+    }
+    
+    // Join threads
+    for(int i = 0; i < 9; ++i) {
+        pthread_join(tid[i], NULL);
+    }
+}
+
+
 int main(int argc, char** argv) {
     FILE* filePtr;
-    pthread_t tid;
     int num;
     char ch;
 
@@ -77,10 +109,37 @@ int main(int argc, char** argv) {
         printf("\n");
     }
 
-    pthread_create(&tid, NULL, columnWorker, NULL);
-    pthread_join(tid, NULL);
+   int option;
+ 
+    printf("Options:\n");        
+    printf("1. One thread for each column\n");
+    printf("2. One thread for each row\n");
+    printf("3. One thread for each subgrid\n");
+    scanf("%d",&option);  
 
-    printf("SOLUTION: %d\n", solution);
+   
+    if(option < 1 || option > 3) {
+        printf("Invalid option\n");
+        return 1;
+    }
+
+    // Perform Sudoku validation
+    clock_t start, end;
+    double time_taken;
+
+    start = clock();
+
+      if(option == 1 || option == 2) {
+        validateSudokuWithThreads(option);
+    } else if(option == 3) {
+        //not implemented  validateSudokuWithProcesses();
+        return 1;
+    }
+    
+    end = clock();
+
+    time_taken = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("SOLUTION: %s (%f seconds)\n", solution ? "YES" : "NO", time_taken);
     
     fclose(filePtr);
     return 0;
