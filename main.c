@@ -67,20 +67,22 @@ void* rowWorker(void* param) {
     pthread_exit(0);
 }
 
-// Worker thread function to check subgrid validity
-void* subgridWorker(void *param){
-    int* data = (int*)param;
-    int startRow = data[0];
-    int startCol = data[1];
-    for(int j = 1; j <= 9; ++j){
-        if(!numberIsInSubgrid(j, startRow, startCol)){
-            solution = 0;
-            printf("Subgrid starting from row %d, column %d doesn't contain %d\n",startRow + 1, startCol +1, j);
-            pthread_exit(NULL);
-        }
-    }
-    pthread_exit(NULL);
+void* subgridWorker(void *param) {
+   int* data = (int*)param;
+   int startRow = data[0] * 3;
+   int startCol = data[1] * 3;
+   for(int j = 1; j <= 9; ++j){
+       if(numberIsInSubgrid(j, startRow, startCol) != 1){
+           solution = 0;
+           printf("Subgrid starting from row %d, column %d doesn't contain %d\n", startRow + 1, startCol + 1, j);
+           pthread_exit(0); 
+       }
+   }
+   pthread_exit(0); 
 }
+
+
+
 
 // Function to validate Sudoku solution using threads
 void validateSudokuWithThreads(int option) {
@@ -100,7 +102,11 @@ void validateSudokuWithThreads(int option) {
             }
             break;
         case 3: // One thread for each subgrid
-            
+            for(int i = 0; i < 3; ++i) {
+                for(int j = 0; j < 3; ++j) {
+                    pthread_create(&tid[i * 3 + j], NULL, subgridWorker, NULL);
+                }
+            }
             break;
         default:
             printf("Invalid option\n");
@@ -111,6 +117,37 @@ void validateSudokuWithThreads(int option) {
     for(int i = 0; i < 9; ++i) {
         pthread_join(tid[i], NULL);
     }
+}
+    
+// Function to perform statistical experiment
+void statisticalExperiment(int option) {
+    const int runs = 50;
+    double total_time = 0;
+
+    printf("Running statistical experiment with option %d...\n", option);
+
+    for(int i = 0; i < runs; ++i) {
+        clock_t start, end;
+        double time_taken;
+        
+        start = clock();
+        
+        if(option >= 1 && option <= 3) {
+            validateSudokuWithThreads(option);
+        } else if(option == 4) {
+            //validateSudokuWithProcesses();
+        } else {
+            printf("Invalid option\n");
+            return;
+        }
+
+        end = clock();
+        time_taken = ((double) (end - start)) / CLOCKS_PER_SEC;
+        total_time += time_taken;
+    }
+
+    double average_time = total_time / runs;
+    printf("Average time taken: %f seconds\n", average_time);
 }
 
 
@@ -147,7 +184,7 @@ int main(int argc, char** argv) {
     scanf("%d",&option);  
 
    
-    if(option < 1 || option > 3) {
+    if(option < 1 || option > 4) {
         printf("Invalid option\n");
         return 1;
     }
@@ -158,9 +195,9 @@ int main(int argc, char** argv) {
 
     start = clock();
 
-      if(option == 1 || option == 2) {
+      if(option >= 1 && option <= 3) {
         validateSudokuWithThreads(option);
-    } else if(option == 3) {
+    } else if(option == 4) {
         //not implemented  validateSudokuWithProcesses();
         return 1;
     }
@@ -170,6 +207,9 @@ int main(int argc, char** argv) {
     time_taken = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("SOLUTION: %s (%f seconds)\n", solution ? "YES" : "NO", time_taken);
     
+    // Perform statistical experiment
+    statisticalExperiment(option);
+
     fclose(filePtr);
     return 0;
 }
