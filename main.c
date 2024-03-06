@@ -113,6 +113,87 @@ void validateSudokuWithThreads(int option) {
     }
 }
 
+void rowProcessor() {
+    for(int i = 0; i < 9; ++i) {
+        for(int j = 1; j < 10; ++j) {
+            if(numberIsInRow(j, i) != 1) {
+                solution = 0; //no solution
+                printf("Row didn't find %d\n", j);
+            } 
+        }
+    }
+}
+
+void columnProcessor() {
+    for(int i = 0; i < 9; ++i) {
+        for(int j = 1; j < 10; ++j) {
+            if(numberIsInCol(j, i) != 1) {
+                solution = 0; //no solution
+                printf("Column didn't find %d\n", j);
+            } 
+        }
+    }
+}
+
+void subgridProcessor(void *param){
+    int* data = (int *)param;
+    int startRow = data[0];
+    int startCol = data[1];
+    for(int j = 1; j <= 9; ++j){
+        if(!numberIsInSubgrid(j, startRow, startCol)){
+            solution = 0;
+            printf("Subgrid starting from row %d, column %d doesn't contain %d\n",startRow + 1, startCol +1, j);
+        }
+    }
+}
+
+void parentProcess(int pipefd, int write_end) {
+    wait(NULL);
+    close(write_end);
+    read(pipefd, &solution, sizeof(int));
+    close(pipefd);
+}
+
+void childProcess(int pipefd) {
+    write(pipefd, &solution, sizeof(int));
+    close(pipefd);
+    exit(EXIT_SUCCESS);
+}
+
+void validateSudokuWithProcesses() {
+    /*open a pipe*/
+    int pipefd[2];
+    pipe(pipefd);
+
+    /*fork process*/
+    pid_t childPid = fork();
+    if(childPid < 0) {
+        printf("could not create a child process\n");
+    } else if(childPid == 0) {
+        /*child process*/
+        close(pipefd[0]);
+        rowProcessor();
+        childProcess(pipefd[1]);
+    } else {
+        /*parent process*/
+        parentProcess(pipefd[0], pipefd[1]);
+    }
+
+    childPid = fork();
+    if(childPid < 0) {
+        printf("could not create a child process\n");
+    } else if(childPid == 0) {
+        /*child process*/
+        close(pipefd[0]);
+        columnProcessor();
+        childProcess(pipefd[1]);
+    } else {
+        /*parent process*/
+        wait(NULL);
+        parentProcess(pipefd[0], pipefd[1]);
+    }
+}
+
 
 int main(int argc, char** argv) {
     FILE* filePtr;
@@ -161,8 +242,7 @@ int main(int argc, char** argv) {
       if(option == 1 || option == 2) {
         validateSudokuWithThreads(option);
     } else if(option == 3) {
-        //not implemented  validateSudokuWithProcesses();
-        return 1;
+        validateSudokuWithProcesses();
     }
     
     end = clock();
