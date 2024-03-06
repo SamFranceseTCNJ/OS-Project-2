@@ -27,6 +27,18 @@ int numberIsInRow(int check, int row) {
     return -1;
 }
 
+// Function to check if a number is present in a subgrid
+int numberIsInSubgrid(int check, int startRow, int startCol){
+    for(int i = 0; i < 3; ++i){
+        for(int j = 0; j < 3; ++j){
+            if(board[startRow + i][startCol + j] == check){
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 // Worker thread function to check column validity
 void* columnWorker(void* param) {
     for(int i = 0; i < 9; ++i) {
@@ -55,6 +67,21 @@ void* rowWorker(void* param) {
     pthread_exit(0);
 }
 
+// Worker thread function to check subgrid validity
+void* subgridWorker(void *param){
+    int* data = (int*)param;
+    int startRow = data[0];
+    int startCol = data[1];
+    for(int j = 1; j <= 9; ++j){
+        if(!numberIsInSubgrid(j, startRow, startCol)){
+            solution = 0;
+            printf("Subgrid starting from row %d, column %d doesn't contain %d\n",startRow + 1, startCol +1, j);
+            pthread_exit(NULL);
+        }
+    }
+    pthread_exit(NULL);
+}
+
 // Function to validate Sudoku solution using threads
 void validateSudokuWithThreads(int option) {
     pthread_t tid[9];
@@ -68,7 +95,9 @@ void validateSudokuWithThreads(int option) {
             }
             break;
         case 2: // One thread for each row
-           
+            for(int i = 0; i < 9; ++i) {
+                pthread_create(&tid[i], NULL, rowWorker, NULL);
+            }
             break;
         case 3: // One thread for each subgrid
             
