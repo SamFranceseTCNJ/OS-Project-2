@@ -81,9 +81,6 @@ void* subgridWorker(void *param) {
    pthread_exit(0); 
 }
 
-
-
-
 // Function to validate Sudoku solution using threads
 void validateSudokuWithThreads(int option) {
     pthread_t tid[9];
@@ -153,17 +150,23 @@ void subgridProcessor(void *param){
     }
 }
 
-void parentProcess(int pipefd, int write_end) {
-    wait(NULL);
-    close(write_end);
-    read(pipefd, &solution, sizeof(int));
-    close(pipefd);
-}
-
-void childProcess(int pipefd) {
-    write(pipefd, &solution, sizeof(int));
-    close(pipefd);
-    exit(EXIT_SUCCESS);
+void forkProcess(int read_end, int write_end, pid_t childPid, int section) {
+    if(childPid < 0) {
+        printf("could not create a child process\n");
+    } else if(childPid == 0) {
+        if(section == 1) {
+            rowProcessor();
+        } else if(section == 2) {
+            columnProcessor();
+        } else {
+            subgridProcessor(NULL);
+        }
+        write(write_end, &solution, sizeof(int));
+        exit(EXIT_SUCCESS);
+    } else {
+        wait(NULL);
+        read(read_end, &solution, sizeof(int));
+    }
 }
 
 void validateSudokuWithProcesses() {
@@ -173,31 +176,12 @@ void validateSudokuWithProcesses() {
 
     /*fork process*/
     pid_t childPid = fork();
-    if(childPid < 0) {
-        printf("could not create a child process\n");
-    } else if(childPid == 0) {
-        /*child process*/
-        close(pipefd[0]);
-        rowProcessor();
-        childProcess(pipefd[1]);
-    } else {
-        /*parent process*/
-        parentProcess(pipefd[0], pipefd[1]);
-    }
-
+    forkProcess(pipefd[0], pipefd[1], childPid, 1);
     childPid = fork();
-    if(childPid < 0) {
-        printf("could not create a child process\n");
-    } else if(childPid == 0) {
-        /*child process*/
-        close(pipefd[0]);
-        columnProcessor();
-        childProcess(pipefd[1]);
-    } else {
-        /*parent process*/
-        wait(NULL);
-        parentProcess(pipefd[0], pipefd[1]);
-    }
+    forkProcess(pipefd[0], pipefd[1], childPid, 2);
+
+    close(pipefd[0]);
+    close(pipefd[1]);
 }
     
 // Function to perform statistical experiment
@@ -216,7 +200,7 @@ void statisticalExperiment(int option) {
         if(option >= 1 && option <= 3) {
             validateSudokuWithThreads(option);
         } else if(option == 4) {
-            //validateSudokuWithProcesses();
+            validateSudokuWithProcesses();
         } else {
             printf("Invalid option\n");
             return;
@@ -262,6 +246,7 @@ int main(int argc, char** argv) {
     printf("1. One thread for each column\n");
     printf("2. One thread for each row\n");
     printf("3. One thread for each subgrid\n");
+    printf("4. Three processes for columns, rows and subgrids\n");
     scanf("%d",&option);  
 
    
@@ -276,9 +261,9 @@ int main(int argc, char** argv) {
 
     start = clock();
 
-      if(option >= 1 && option <= 3) {
+    if(option >= 1 && option <= 3) {
         validateSudokuWithThreads(option);
-    } else if(option == 3) {
+    } else if(option == 4) {
         validateSudokuWithProcesses();
     }
     
