@@ -272,13 +272,13 @@ int main(int argc, char** argv) {
         printf("\n");
     }
 
-   int option;
+   int option = atoi(argv[1]);
  
     printf("Options:\n");        
     printf("1. One thread for everything\n");
     printf("2. One thread for every column\n");
     printf("3. Three processes\n");
-    scanf("%d",&option);  
+    printf("You chose: %d\n", option);
 
    
     if(option < 1 || option > 3) {
