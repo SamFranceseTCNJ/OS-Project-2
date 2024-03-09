@@ -6,6 +6,11 @@
 #include <sys/wait.h>
 int board[9][9];
 int solution = 1;
+struct ThreadArgs {
+    int* data;
+    int startRow;
+    int startCol;
+};
 
 // Function to check if a number is present in a column
 int numberIsInCol(int check, int col) {
@@ -41,36 +46,34 @@ int numberIsInSubgrid(int check, int startRow, int startCol){
 
 // Worker thread function to check column validity
 void* columnWorker(void* param) {
-    for(int i = 0; i < 9; ++i) {
-        for(int j = 1; j < 10; ++j) {
-            if(numberIsInCol(j, i) != 1) {
-                solution = 0; //no solution
-                printf("Column didn't find %d\n", j);
-                pthread_exit(0);
-            } 
-        }
+    struct ThreadArgs* args = (struct ThreadArgs*)param;
+    for(int j = 1; j < 10; ++j) {
+        if(numberIsInCol(j, args->startCol) != 1) {
+            solution = 0; //no solution
+            printf("Column didn't find %d\n", j);
+            pthread_exit(0);
+        } 
     }
     pthread_exit(0);
 }
 
 // Worker thread function to check row validity
 void* rowWorker(void* param) {
-   for(int i = 0; i < 9; ++i) {
-        for(int j = 1; j < 10; ++j) {
-            if(numberIsInRow(j, i) != 1) {
-                solution = 0; //no solution
-                printf("Row didn't find %d\n", j);
-                pthread_exit(0);
-            } 
-        }
+    struct ThreadArgs* args = (struct ThreadArgs*)param;
+    for(int j = 1; j < 10; ++j) {
+        if(numberIsInRow(j, args->startRow) != 1) {
+            solution = 0; //no solution
+            printf("Row didn't find %d\n", j);
+            pthread_exit(0);
+        } 
     }
     pthread_exit(0);
 }
 
 void* subgridWorker(void *param) {
-   int* data = (int*)param;
-   int startRow = data[0] * 3;
-   int startCol = data[1] * 3;
+    struct ThreadArgs* args = (struct ThreadArgs*)param;
+   int startRow = args->startRow;
+   int startCol = args->startCol;
    for(int j = 1; j <= 9; ++j){
        if(numberIsInSubgrid(j, startRow, startCol) != 1){
            solution = 0;
@@ -79,41 +82,6 @@ void* subgridWorker(void *param) {
        }
    }
    pthread_exit(0); 
-}
-
-// Function to validate Sudoku solution using threads
-void validateSudokuWithThreads(int option) {
-    pthread_t tid[9];
-    int data[2];
-    
-    // Create threads based on the option selected
-    switch(option) {
-        case 1: // One thread for each column
-            for(int i = 0; i < 9; ++i) {
-                pthread_create(&tid[i], NULL, columnWorker, NULL);
-            }
-            break;
-        case 2: // One thread for each row
-            for(int i = 0; i < 9; ++i) {
-                pthread_create(&tid[i], NULL, rowWorker, NULL);
-            }
-            break;
-        case 3: // One thread for each subgrid
-            for(int i = 0; i < 3; ++i) {
-                for(int j = 0; j < 3; ++j) {
-                    pthread_create(&tid[i * 3 + j], NULL, subgridWorker, NULL);
-                }
-            }
-            break;
-        default:
-            printf("Invalid option\n");
-            return;
-    }
-    
-    // Join threads
-    for(int i = 0; i < 9; ++i) {
-        pthread_join(tid[i], NULL);
-    }
 }
 
 void rowProcessor() {
@@ -138,17 +106,75 @@ void columnProcessor() {
     }
 }
 
-void subgridProcessor(void *param){
-    int* data = (int *)param;
-    int startRow = data[0];
-    int startCol = data[1];
-    for(int j = 1; j <= 9; ++j){
-        if(!numberIsInSubgrid(j, startRow, startCol)){
-            solution = 0;
-            printf("Subgrid starting from row %d, column %d doesn't contain %d\n",startRow + 1, startCol +1, j);
+//function to check subgrids for PROCESSES ONE THREAD
+void subgridProcessor(int startRow, int startCol){
+   for(int j = 1; j <= 9; ++j){
+       if(numberIsInSubgrid(j, startRow, startCol) != 1){
+           solution = 0;
+           printf("Subgrid starting from row %d, column %d doesn't contain %d\n", startRow + 1, startCol + 1, j);
+       }
+   }
+}
+
+// Function to validate Sudoku solution using threads
+void validateSudokuWithThreads(int option) {
+    int NUM_THREADS = 27;
+    pthread_t tid[NUM_THREADS];
+    struct ThreadArgs args[NUM_THREADS];
+    
+    // Create threads based on the option selected
+    switch(option) {
+        case 1: // One thread for everything 
+            rowProcessor();
+            columnProcessor();
+            for(int i = 0; i < 9; i += 3) {
+                for(int j = 0; j < 9; j += 3) {
+                    subgridProcessor(i, j);
+                }
+            }
+            break;
+        case 2: // One thread for each subgrid, column, and row
+            /*subgrid threads*/
+            int thread = 0;
+            int startCol = 0;
+            int startRow = 0;
+            for(int i = 0; i < 9; i += 3) {
+                for(int j = 0; j < 9; j += 3) {
+                    args[thread].startRow = i;
+                    args[thread].startCol = j;
+                    thread++;
+                }
+            }
+            /*create subgrid threads*/
+            for(int i = 0; i < 9; ++i) {
+                pthread_create(&tid[i], NULL, subgridWorker, (void*)&args[i]);
+            }
+            /*column threads*/
+            for(int i = 9; i < 18; ++i) {
+                args[i].startCol = startCol;
+                pthread_create(&tid[i], NULL, columnWorker, (void*)&args[i]);
+                startCol++;
+            }
+            /*row threads*/
+            for(int i = 18; i < 27; ++i) {
+                args[i].startRow = startRow;
+                pthread_create(&tid[i], NULL, rowWorker, (void*)&args[i]);
+                startRow++;
+            }
+            break;
+        default:
+            printf("Invalid option\n");
+            return;
+    }
+    
+    // Join threads
+    if(option != 1) {
+        for(int i = 0; i < NUM_THREADS; ++i) {
+            pthread_join(tid[i], NULL);
         }
     }
 }
+
 
 void forkProcess(int read_end, int write_end, pid_t childPid, int section) {
     if(childPid < 0) {
@@ -159,7 +185,11 @@ void forkProcess(int read_end, int write_end, pid_t childPid, int section) {
         } else if(section == 2) {
             columnProcessor();
         } else {
-            subgridProcessor(NULL);
+            for(int i = 0; i < 9; i += 3) {
+                for(int j = 0; j < 9; j += 3) {
+                    subgridProcessor(i, j);
+                }
+            }
         }
         write(write_end, &solution, sizeof(int));
         exit(EXIT_SUCCESS);
@@ -176,9 +206,11 @@ void validateSudokuWithProcesses() {
 
     /*fork process*/
     pid_t childPid = fork();
-    forkProcess(pipefd[0], pipefd[1], childPid, 1);
+    forkProcess(pipefd[0], pipefd[1], childPid, 1); /*ROW*/
     childPid = fork();
-    forkProcess(pipefd[0], pipefd[1], childPid, 2);
+    forkProcess(pipefd[0], pipefd[1], childPid, 2); /*COLUMN*/
+    childPid = fork();
+    forkProcess(pipefd[0], pipefd[1], childPid, 3); /*SUBGRID*/
 
     close(pipefd[0]);
     close(pipefd[1]);
@@ -197,9 +229,9 @@ void statisticalExperiment(int option) {
         
         start = clock();
         
-        if(option >= 1 && option <= 3) {
+        if(option >= 1 && option < 3) {
             validateSudokuWithThreads(option);
-        } else if(option == 4) {
+        } else if(option == 3) {
             validateSudokuWithProcesses();
         } else {
             printf("Invalid option\n");
@@ -243,14 +275,13 @@ int main(int argc, char** argv) {
    int option;
  
     printf("Options:\n");        
-    printf("1. One thread for each column\n");
-    printf("2. One thread for each row\n");
-    printf("3. One thread for each subgrid\n");
-    printf("4. Three processes for columns, rows and subgrids\n");
+    printf("1. One thread for everything\n");
+    printf("2. One thread for every column\n");
+    printf("3. Three processes\n");
     scanf("%d",&option);  
 
    
-    if(option < 1 || option > 4) {
+    if(option < 1 || option > 3) {
         printf("Invalid option\n");
         return 1;
     }
@@ -261,9 +292,9 @@ int main(int argc, char** argv) {
 
     start = clock();
 
-    if(option >= 1 && option <= 3) {
+    if(option >= 1 && option < 3) {
         validateSudokuWithThreads(option);
-    } else if(option == 4) {
+    } else if(option == 3) {
         validateSudokuWithProcesses();
     }
     
