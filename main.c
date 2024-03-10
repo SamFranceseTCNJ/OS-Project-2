@@ -12,7 +12,7 @@ struct ThreadArgs {
     int startCol;
 };
 
-// Function to check if a number is present in a column
+/* Function to check if a number is present in a column*/
 int numberIsInCol(int check, int col) {
     for(int i = 0; i < 9; ++i) {
         if(board[i][col] == check) {
@@ -22,7 +22,7 @@ int numberIsInCol(int check, int col) {
     return -1;
 }
 
-// Function to check if a number is present in a row
+/* Function to check if a number is present in a row*/
 int numberIsInRow(int check, int row) {
     for(int j = 0; j < 9; ++j) {
         if(board[row][j] == check) {
@@ -32,7 +32,7 @@ int numberIsInRow(int check, int row) {
     return -1;
 }
 
-// Function to check if a number is present in a subgrid
+/* Function to check if a number is present in a subgrid*/
 int numberIsInSubgrid(int check, int startRow, int startCol){
     for(int i = 0; i < 3; ++i){
         for(int j = 0; j < 3; ++j){
@@ -44,12 +44,12 @@ int numberIsInSubgrid(int check, int startRow, int startCol){
     return 0;
 }
 
-// Worker thread function to check column validity
+/* Worker thread function to check column validity*/
 void* columnWorker(void* param) {
     struct ThreadArgs* args = (struct ThreadArgs*)param;
     for(int j = 1; j < 10; ++j) {
         if(numberIsInCol(j, args->startCol) != 1) {
-            solution = 0; //no solution
+            solution = 0; /*no solution*/
             printf("Column didn't find %d\n", j);
             pthread_exit(0);
         } 
@@ -57,12 +57,12 @@ void* columnWorker(void* param) {
     pthread_exit(0);
 }
 
-// Worker thread function to check row validity
+/* Worker thread function to check row validity*/
 void* rowWorker(void* param) {
     struct ThreadArgs* args = (struct ThreadArgs*)param;
     for(int j = 1; j < 10; ++j) {
         if(numberIsInRow(j, args->startRow) != 1) {
-            solution = 0; //no solution
+            solution = 0; /*no solution*/
             printf("Row didn't find %d\n", j);
             pthread_exit(0);
         } 
@@ -106,7 +106,7 @@ void columnProcessor() {
     }
 }
 
-//function to check subgrids for PROCESSES ONE THREAD
+/*function to check subgrids for PROCESSES ONE THREAD*/
 void subgridProcessor(int startRow, int startCol){
    for(int j = 1; j <= 9; ++j){
        if(numberIsInSubgrid(j, startRow, startCol) != 1){
@@ -116,15 +116,15 @@ void subgridProcessor(int startRow, int startCol){
    }
 }
 
-// Function to validate Sudoku solution using threads
+/* Function to validate Sudoku solution using threads*/
 void validateSudokuWithThreads(int option) {
     int NUM_THREADS = 27;
     pthread_t tid[NUM_THREADS];
     struct ThreadArgs args[NUM_THREADS];
     
-    // Create threads based on the option selected
+    /* Create threads based on the option selected*/
     switch(option) {
-        case 1: // One thread for everything 
+        case 1: /* One thread for everything */
             rowProcessor();
             columnProcessor();
             for(int i = 0; i < 9; i += 3) {
@@ -133,7 +133,7 @@ void validateSudokuWithThreads(int option) {
                 }
             }
             break;
-        case 2: // One thread for each subgrid, column, and row
+        case 2: /* One thread for each subgrid, column, and row */
             /*subgrid threads*/
             int thread = 0;
             int startCol = 0;
@@ -167,7 +167,7 @@ void validateSudokuWithThreads(int option) {
             return;
     }
     
-    // Join threads
+    /* Join threads */
     if(option != 1) {
         for(int i = 0; i < NUM_THREADS; ++i) {
             pthread_join(tid[i], NULL);
@@ -216,7 +216,7 @@ void validateSudokuWithProcesses() {
     close(pipefd[1]);
 }
     
-// Function to perform statistical experiment
+/* Function to perform statistical experiment */
 void statisticalExperiment(int option) {
     const int runs = 50;
     double total_time = 0;
@@ -260,7 +260,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    //read file into 2d board array
+    /*read file into 2d board array*/
     for(int i = 0; i < 9; ++i) {
         for(int j = 0; j < 9; ++j) {
             if(fscanf(filePtr, "%d", &board[i][j]) != 1) {
@@ -286,7 +286,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Perform Sudoku validation
+    /* Perform Sudoku validation*/
     clock_t start, end;
     double time_taken;
 
@@ -303,7 +303,7 @@ int main(int argc, char** argv) {
     time_taken = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("SOLUTION: %s (%f seconds)\n", solution ? "YES" : "NO", time_taken);
     
-    // Perform statistical experiment
+    /* Perform statistical experiment*/
     statisticalExperiment(option);
 
     fclose(filePtr);
