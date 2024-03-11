@@ -1,3 +1,11 @@
+/*Nunzio D'Amelio Sam Francese
+CSC 345 Project 1
+3.10.2024
+Dr. Yon
+Project is design to check if Sudoku is valid, and process the board
+using different methods of threads.*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -221,7 +229,7 @@ void statisticalExperiment(int option) {
     const int runs = 50;
     double total_time = 0;
 
-    printf("Running statistical experiment with option %d...\n", option);
+  //  printf("Running statistical experiment with option %d...\n", option);
 
     for(int i = 0; i < runs; ++i) {
         clock_t start, end;
@@ -244,7 +252,7 @@ void statisticalExperiment(int option) {
     }
 
     double average_time = total_time / runs;
-    printf("Average time taken: %f seconds\n", average_time);
+  //  printf("Average time taken: %f seconds\n", average_time);
 }
 
 
